@@ -16,32 +16,31 @@ async def on_ready():
     await bot.tree.sync()
     print("Bot ready")
 
-@bot.tree.command(name="unban-24h")
+@bot.tree.command(name="unban-24h", description="Unban users banned in last 24h")
 async def unban_24h(interaction: discord.Interaction):
 
     if not interaction.user.guild_permissions.administrator:
         return await interaction.response.send_message("No permission", ephemeral=True)
+
+    await interaction.response.send_message("Starting unban process... (this may take a bit)")
 
     guild = interaction.guild
     cutoff = datetime.now(timezone.utc) - timedelta(days=1)
 
     targets = set()
 
-    async for entry in guild.audit_logs(action=discord.AuditLogAction.ban, limit=2000):
+    async for entry in guild.audit_logs(limit=2000, action=discord.AuditLogAction.ban):
         if entry.created_at >= cutoff and entry.target:
             targets.add(entry.target.id)
 
-    await interaction.response.send_message(f"Unbanning {len(targets)} users...")
-
     count = 0
+
     for uid in targets:
         try:
-            user = await bot.fetch_user(uid)
+            user = await interaction.client.fetch_user(uid)
             await guild.unban(user)
             count += 1
         except:
             pass
 
     await interaction.followup.send(f"Done. Unbanned {count}")
-
-bot.run(TOKEN)
